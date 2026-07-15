@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 func CreateChessboard(size int, player1, player2 string) {
+	fmt.Printf("   %s\n", player1)
 	fmt.Print("   ")
 	for col := 0; col < size; col++ {
 		fmt.Printf("%c ", 'A'+col)
@@ -36,13 +37,9 @@ func CreateChessboard(size int, player1, player2 string) {
 				fmt.Print("  ")
 			}
 		}
-		if line == 0 {
-			fmt.Printf("  %s", player1)
-		} else if line == size-1 {
-			fmt.Printf("  %s", player2)
-		}
 		fmt.Println()
 	}
+	fmt.Printf("   %s\n", player2)
 }
 
 func main(){
