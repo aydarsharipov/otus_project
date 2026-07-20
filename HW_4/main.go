@@ -2,21 +2,11 @@ package main
 
 import "fmt"
 
-func letterLabel(n int) string {
-	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	if n < 26 {
-		return string(letters[n])
-	}
-	first := (n) / 26
-	second := n % 26
-	return string(letters[first-1]) + string(letters[second])
-}
-
 func CreateChessboard(size int, player1, player2 string) {
 	fmt.Printf("   %s\n", player1)
 	fmt.Print("   ")
 	for col := 0; col < size; col++ {
-		fmt.Printf("%s ", letterLabel(col))
+		fmt.Printf("%s ", capsLetters(col))
 	}
 	fmt.Println()
 
@@ -26,7 +16,7 @@ func CreateChessboard(size int, player1, player2 string) {
 	lastRow := []rune{'♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'}
 
 	for line := 0; line < size; line++ {
-		fmt.Printf("%s  ", letterLabel(line))
+		fmt.Printf("%s  ", capsLetters(line))
 		for col := 0; col < size; col++ {
 			piece := rune(' ')
 			if line == 0 {
@@ -50,6 +40,16 @@ func CreateChessboard(size int, player1, player2 string) {
 		fmt.Println()
 	}
 	fmt.Printf("   %s\n", player2)
+}
+
+func capsLetters(n int) string {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	if n < 26 {
+		return string(letters[n])
+	}
+	first := (n) / 26
+	second := n % 26
+	return string(letters[first-1]) + string(letters[second])
 }
 
 func main(){
