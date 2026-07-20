@@ -1,3 +1,3 @@
-module HW_3
+module HW_4
 
 go 1.26.4
