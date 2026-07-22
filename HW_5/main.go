@@ -35,13 +35,24 @@ func CreateChessboard(b *board.Board, player1, player2 string) {
 }
 
 func main() {
-	whitePlayer := player.NewPlayer(1, "Alice", player.White)
-	blackPlayer := player.NewPlayer(2, "Bob", player.Black)
+	var size int
+	var player1 string
+	var player2 string
+
+	fmt.Print("Введите размер доски: ")
+	fmt.Scan(&size)
+	fmt.Print("Введите имя игрока №1: ")
+	fmt.Scan(&player1)
+	fmt.Print("Введите имя игрока №2: ")
+	fmt.Scan(&player2)
+
+	whitePlayer := player.NewPlayer(1, player1, player.White)
+	blackPlayer := player.NewPlayer(2, player2, player.Black)
 
 	fmt.Printf("Игрок 1: %s (цвет: %s)\n", whitePlayer.Name(), whitePlayer.Color())
 	fmt.Printf("Игрок 2: %s (цвет: %s)\n", blackPlayer.Name(), blackPlayer.Color())
 
-	b := board.NewBoard(8)
+	b := board.NewBoard(size)
 
 	pawnWhite := piece.NewPiece(piece.Pawn, "white")
 	b.SetPiece(6, 4, pawnWhite)
@@ -67,7 +78,6 @@ func main() {
 	move1 := move.NewMove(1, 6, 4, 4, 4, pawnWhite)
 	gameInstance.MakeMove(move1)
 
-	fmt.Printf("\nСделан ход: e7-e5\n")
 	fmt.Printf("Статус игры: %s\n", gameInstance.Status())
 	fmt.Printf("Ход игрока: %s\n", gameInstance.CurrentTurn().Name())
 	fmt.Printf("Всего ходов: %d\n", len(gameInstance.Moves()))
