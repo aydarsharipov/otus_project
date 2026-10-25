@@ -299,37 +299,32 @@ func (g *Game) MarshalJSON() ([]byte, error) {
 
 func (g *Game) UnmarshalJSON(data []byte) error {
 	var v gameJSON
-	if err := json.Unmarshal(data, &v); err != nil {
+	err := json.Unmarshal(data, &v)
+	if err != nil {
 		return err
 	}
-	if v.White == nil || v.Black == nil || v.Board == nil {
-		return errors.New("в игре нет игроков или доски")
-	}
 
-	byColor := map[player.Color]*player.Player{player.White: v.White, player.Black: v.Black}
 	g.id = v.ID
 	g.whitePlayer = v.White
 	g.blackPlayer = v.Black
 	g.board = v.Board
 	g.moves = v.Moves
-	g.currentTurn = byColor[v.CurrentTurn]
 	g.status = v.Status
 	g.createdAt = v.CreatedAt
-	g.winner = byColor[v.Winner]
 	g.endReason = v.EndReason
 	g.turnStartedAt = time.Now()
-	g.times = map[player.Color]*PlayerTime{player.White: {}, player.Black: {}}
+	g.times = v.Times
 
-	if g.moves == nil {
-		g.moves = make([]*move.Move, 0)
-	}
-	if g.currentTurn == nil {
+	if v.CurrentTurn == player.Black {
+		g.currentTurn = g.blackPlayer
+	} else {
 		g.currentTurn = g.whitePlayer
 	}
-	for color, t := range v.Times {
-		if t != nil && byColor[color] != nil {
-			g.times[color] = t
-		}
+	if v.Winner == player.White {
+		g.winner = g.whitePlayer
+	}
+	if v.Winner == player.Black {
+		g.winner = g.blackPlayer
 	}
 	return nil
 }

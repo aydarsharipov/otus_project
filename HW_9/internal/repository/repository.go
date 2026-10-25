@@ -1,14 +1,9 @@
 package repository
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
-	"sync"
 
 	"HW_9/internal/model"
 	"HW_9/internal/model/board"
@@ -18,112 +13,139 @@ import (
 	"HW_9/internal/model/player"
 )
 
-// store хранит слайс сущностей и дублирует его в JSON Lines файл:
-// одна строка — одна сущность, поэтому добавление — это дозапись в конец файла.
-type store[T model.Entity] struct {
-	mu    sync.Mutex
-	items []T
-	path  string
-}
+// папка где лежат файлы
+var dataDir = "data"
 
-func newStore[T model.Entity](fileName string) *store[T] {
-	return &store[T]{items: make([]T, 0), path: fileName}
-}
-
-// Add сохраняет сущность в слайс и дописывает её в файл.
-func (s *store[T]) Add(v T) error {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Errorf("сериализация %s: %w", v.EntityName(), err)
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	f, err := os.OpenFile(s.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+// функция записывает слайс в файл целиком
+func saveToFile(fileName string, data any) error {
+	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	if _, err := f.Write(append(data, '\n')); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-
-	s.items = append(s.items, v)
-	return nil
+	return os.WriteFile(dataDir+"/"+fileName, bytes, 0644)
 }
 
-// Load заполняет слайс данными из файла. Отсутствие файла — не ошибка.
-func (s *store[T]) Load() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	f, err := os.Open(s.path)
-	if errors.Is(err, os.ErrNotExist) {
+// функция читает файл в слайс, если файла нет то ничего не делаем
+func loadFromFile(fileName string, data any) error {
+	bytes, err := os.ReadFile(dataDir + "/" + fileName)
+	if os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	return json.Unmarshal(bytes, data)
+}
 
-	items := make([]T, 0)
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
-	for line := 1; scanner.Scan(); line++ {
-		if len(scanner.Bytes()) == 0 {
-			continue
-		}
-		var v T
-		if err := json.Unmarshal(scanner.Bytes(), &v); err != nil {
-			return fmt.Errorf("%s, строка %d: %w", s.path, line, err)
-		}
-		items = append(items, v)
-	}
-	if err := scanner.Err(); err != nil {
+// ---------- игроки ----------
+
+type PlayersSlice struct {
+	Items []*player.Player
+}
+
+func (s *PlayersSlice) Add(p *player.Player) error {
+	s.Items = append(s.Items, p)
+	return saveToFile("players.json", s.Items)
+}
+
+func (s *PlayersSlice) Load() error {
+	return loadFromFile("players.json", &s.Items)
+}
+
+// ---------- фигуры ----------
+
+type PiecesSlice struct {
+	Items []*piece.Piece
+}
+
+func (s *PiecesSlice) Add(p *piece.Piece) error {
+	s.Items = append(s.Items, p)
+	return saveToFile("pieces.json", s.Items)
+}
+
+func (s *PiecesSlice) Load() error {
+	return loadFromFile("pieces.json", &s.Items)
+}
+
+// ---------- ходы ----------
+
+type MovesSlice struct {
+	Items []*move.Move
+}
+
+func (s *MovesSlice) Add(m *move.Move) error {
+	s.Items = append(s.Items, m)
+	return saveToFile("moves.json", s.Items)
+}
+
+func (s *MovesSlice) Load() error {
+	return loadFromFile("moves.json", &s.Items)
+}
+
+// ---------- доски ----------
+
+type BoardsSlice struct {
+	Items []*board.Board
+}
+
+func (s *BoardsSlice) Add(b *board.Board) error {
+	s.Items = append(s.Items, b)
+	return saveToFile("boards.json", s.Items)
+}
+
+func (s *BoardsSlice) Load() error {
+	return loadFromFile("boards.json", &s.Items)
+}
+
+// ---------- игры ----------
+
+type GamesSlice struct {
+	Items []*game.Game
+}
+
+func (s *GamesSlice) Add(g *game.Game) error {
+	s.Items = append(s.Items, g)
+	return saveToFile("games.json", s.Items)
+}
+
+func (s *GamesSlice) Load() error {
+	return loadFromFile("games.json", &s.Items)
+}
+
+var players PlayersSlice
+var pieces PiecesSlice
+var moves MovesSlice
+var boards BoardsSlice
+var games GamesSlice
+
+// LoadAll вызывается при старте программы и заполняет слайсы из файлов
+func LoadAll() error {
+	err := os.MkdirAll(dataDir, 0755)
+	if err != nil {
 		return err
 	}
 
-	s.items = items
+	err = players.Load()
+	if err != nil {
+		return err
+	}
+	err = pieces.Load()
+	if err != nil {
+		return err
+	}
+	err = moves.Load()
+	if err != nil {
+		return err
+	}
+	err = boards.Load()
+	if err != nil {
+		return err
+	}
+	err = games.Load()
+	if err != nil {
+		return err
+	}
 	return nil
-}
-
-func (s *store[T]) All() []T {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return append([]T(nil), s.items...)
-}
-
-func (s *store[T]) Len() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.items)
-}
-
-var (
-	players *store[*player.Player]
-	pieces  *store[*piece.Piece]
-	moves   *store[*move.Move]
-	boards  *store[*board.Board]
-	games   *store[*game.Game]
-)
-
-// Init создаёт каталог с данными и при рестарте наполняет слайсы из файлов.
-func Init(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-
-	players = newStore[*player.Player](filepath.Join(dir, "players.jsonl"))
-	pieces = newStore[*piece.Piece](filepath.Join(dir, "pieces.jsonl"))
-	moves = newStore[*move.Move](filepath.Join(dir, "moves.jsonl"))
-	boards = newStore[*board.Board](filepath.Join(dir, "boards.jsonl"))
-	games = newStore[*game.Game](filepath.Join(dir, "games.jsonl"))
-
-	return errors.Join(players.Load(), pieces.Load(), moves.Load(), boards.Load(), games.Load())
 }
 
 func Save(e model.Entity) error {
@@ -138,29 +160,23 @@ func Save(e model.Entity) error {
 		return boards.Add(v)
 	case *game.Game:
 		return games.Add(v)
-	default:
-		return fmt.Errorf("неизвестный тип сущности: %T", e)
 	}
+	return fmt.Errorf("неизвестный тип: %T", e)
 }
 
 func Run(in <-chan model.Entity) {
 	for e := range in {
-		if err := Save(e); err != nil {
-			log.Println("Ошибка сохранения:", err)
+		err := Save(e)
+		if err != nil {
+			fmt.Println("ошибка сохранения:", err)
 		}
 	}
 }
 
-// MaxGameID нужен, чтобы после рестарта новые игры не получали уже занятые id.
-func MaxGameID() int {
-	maxID := 0
-	for _, g := range games.All() {
-		maxID = max(maxID, g.ID())
-	}
-	return maxID
-}
-
-func Stats() string {
-	return fmt.Sprintf("игроков: %d, фигур: %d, ходов: %d, досок: %d, игр: %d",
-		players.Len(), pieces.Len(), moves.Len(), boards.Len(), games.Len())
+func PrintCount() {
+	fmt.Println("игроков:", len(players.Items))
+	fmt.Println("фигур:", len(pieces.Items))
+	fmt.Println("ходов:", len(moves.Items))
+	fmt.Println("досок:", len(boards.Items))
+	fmt.Println("игр:", len(games.Items))
 }

@@ -20,11 +20,8 @@ type Service struct {
 	nextID atomic.Int64
 }
 
-// New принимает последний занятый id, чтобы после рестарта id не повторялись.
-func New(out chan<- model.Entity, lastID int) *Service {
-	s := &Service{out: out}
-	s.nextID.Store(int64(lastID))
-	return s
+func New(out chan<- model.Entity) *Service {
+	return &Service{out: out}
 }
 
 func (s *Service) newID() int {

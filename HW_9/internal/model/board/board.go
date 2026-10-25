@@ -120,7 +120,6 @@ type boardJSON struct {
 	Cells []cellJSON `json:"cells"`
 }
 
-// MarshalJSON сохраняет только занятые клетки.
 func (b *Board) MarshalJSON() ([]byte, error) {
 	v := boardJSON{Size: b.size, Cells: make([]cellJSON, 0)}
 	for _, row := range b.cells {
@@ -137,9 +136,6 @@ func (b *Board) UnmarshalJSON(data []byte) error {
 	var v boardJSON
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
-	}
-	if v.Size <= 0 || v.Size > StandardSize {
-		return fmt.Errorf("некорректный размер доски: %d", v.Size)
 	}
 	*b = *NewBoard(v.Size)
 	for _, c := range v.Cells {

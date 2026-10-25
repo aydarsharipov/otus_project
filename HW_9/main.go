@@ -19,10 +19,7 @@ import (
 	"HW_9/internal/service"
 )
 
-const (
-	clearScreen = "\033[H\033[2J"
-	dataDir     = "data"
-)
+const clearScreen = "\033[H\033[2J"
 
 const (
 	generateInterval = 3 * time.Second
@@ -55,7 +52,7 @@ func newApp(parent context.Context) *app {
 		entities:  make(chan model.Entity, 100),
 		saverDone: make(chan struct{}),
 	}
-	a.svc = service.New(a.entities, repository.MaxGameID())
+	a.svc = service.New(a.entities)
 
 	go func() {
 		defer close(a.saverDone)
@@ -308,16 +305,19 @@ func main() {
 	ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
-	if err := repository.Init(dataDir); err != nil {
-		fmt.Fprintln(os.Stderr, "Ошибка загрузки данных:", err)
-		os.Exit(1)
+	err := repository.LoadAll()
+	if err != nil {
+		fmt.Println("Ошибка загрузки данных:", err)
+		return
 	}
-	fmt.Println("Загружено из файлов:", repository.Stats())
+	fmt.Println("Загружено из файлов:")
+	repository.PrintCount()
 
 	a := newApp(ctx)
 	defer func() {
 		a.Stop()
-		fmt.Println("Сохранено в файлах:", repository.Stats())
+		fmt.Println("Сохранено в файлах:")
+		repository.PrintCount()
 	}()
 
 	lines := readLines(a.ctx)
