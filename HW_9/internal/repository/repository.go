@@ -13,10 +13,10 @@ import (
 	"HW_9/internal/model/player"
 )
 
-// папка где лежат файлы
+// папка с файлами
 var dataDir = "data"
 
-// функция записывает слайс в файл целиком
+// сохраняем слайс в файл
 func saveToFile(fileName string, data any) error {
 	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -25,7 +25,7 @@ func saveToFile(fileName string, data any) error {
 	return os.WriteFile(dataDir+"/"+fileName, bytes, 0644)
 }
 
-// функция читает файл в слайс, если файла нет то ничего не делаем
+// читаем слайс из файла
 func loadFromFile(fileName string, data any) error {
 	bytes, err := os.ReadFile(dataDir + "/" + fileName)
 	if os.IsNotExist(err) {
@@ -37,7 +37,7 @@ func loadFromFile(fileName string, data any) error {
 	return json.Unmarshal(bytes, data)
 }
 
-// ---------- игроки ----------
+// игроки
 
 type PlayersSlice struct {
 	Items []*player.Player
@@ -52,7 +52,7 @@ func (s *PlayersSlice) Load() error {
 	return loadFromFile("players.json", &s.Items)
 }
 
-// ---------- фигуры ----------
+// фигуры
 
 type PiecesSlice struct {
 	Items []*piece.Piece
@@ -67,7 +67,7 @@ func (s *PiecesSlice) Load() error {
 	return loadFromFile("pieces.json", &s.Items)
 }
 
-// ---------- ходы ----------
+// ходы
 
 type MovesSlice struct {
 	Items []*move.Move
@@ -82,7 +82,7 @@ func (s *MovesSlice) Load() error {
 	return loadFromFile("moves.json", &s.Items)
 }
 
-// ---------- доски ----------
+// доски
 
 type BoardsSlice struct {
 	Items []*board.Board
@@ -97,7 +97,7 @@ func (s *BoardsSlice) Load() error {
 	return loadFromFile("boards.json", &s.Items)
 }
 
-// ---------- игры ----------
+// игры
 
 type GamesSlice struct {
 	Items []*game.Game
@@ -118,7 +118,7 @@ var moves MovesSlice
 var boards BoardsSlice
 var games GamesSlice
 
-// LoadAll вызывается при старте программы и заполняет слайсы из файлов
+// загружаем все слайсы из файлов
 func LoadAll() error {
 	err := os.MkdirAll(dataDir, 0755)
 	if err != nil {
