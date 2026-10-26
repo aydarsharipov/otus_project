@@ -1,0 +1,535 @@
+basePath: /api
+definitions:
+  board.Board:
+    properties:
+      cells:
+        items:
+          items:
+            $ref: '#/definitions/piece.Piece'
+          type: array
+        type: array
+    type: object
+  game.Game:
+    properties:
+      black:
+        $ref: '#/definitions/player.Player'
+      board:
+        $ref: '#/definitions/board.Board'
+      id:
+        example: 1
+        type: integer
+      moves:
+        items:
+          $ref: '#/definitions/move.Move'
+        type: array
+      status:
+        description: active или finished
+        example: active
+        type: string
+      turn:
+        example: white
+        type: string
+      white:
+        $ref: '#/definitions/player.Player'
+      winner:
+        example: black
+        type: string
+    type: object
+  move.Move:
+    properties:
+      from_col:
+        example: 4
+        type: integer
+      from_row:
+        example: 6
+        type: integer
+      game_id:
+        example: 1
+        type: integer
+      id:
+        example: 1
+        type: integer
+      notation:
+        example: ♟ E2-E4
+        type: string
+      piece:
+        $ref: '#/definitions/piece.Piece'
+      to_col:
+        example: 4
+        type: integer
+      to_row:
+        example: 4
+        type: integer
+    type: object
+  piece.Piece:
+    properties:
+      color:
+        example: white
+        type: string
+      symbol:
+        example: ♟
+        type: string
+      type:
+        example: pawn
+        type: string
+    type: object
+  player.Player:
+    properties:
+      color:
+        example: white
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Аня
+        type: string
+    type: object
+  server.GameRequest:
+    properties:
+      black_id:
+        example: 2
+        type: integer
+      white_id:
+        example: 1
+        type: integer
+    type: object
+  server.GameUpdateRequest:
+    properties:
+      action:
+        example: surrender
+        type: string
+    type: object
+  server.LoginRequest:
+    properties:
+      login:
+        example: admin
+        type: string
+      password:
+        example: поменяй_меня
+        type: string
+    type: object
+  server.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  server.MoveRequest:
+    properties:
+      from:
+        example: E2
+        type: string
+      game_id:
+        example: 1
+        type: integer
+      to:
+        example: E4
+        type: string
+    type: object
+  server.PlayerRequest:
+    properties:
+      color:
+        example: white
+        type: string
+      name:
+        example: Аня
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Сервер для игры в шахматы. Сначала POST /login, потом нажать Authorize
+    и вставить "Bearer <токен>"
+  title: Шахматы API
+  version: "1.0"
+paths:
+  /game:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: id белого и чёрного игрока
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.GameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/game.Game'
+        "400":
+          description: ошибка в данных
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Создать игру
+      tags:
+      - games
+  /game/{id}:
+    delete:
+      parameters:
+      - description: id игры
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: неправильный id
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+        "404":
+          description: игра не найдена
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Удалить игру
+      tags:
+      - games
+    get:
+      parameters:
+      - description: id игры
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/game.Game'
+        "400":
+          description: неправильный id
+          schema:
+            type: string
+        "404":
+          description: игра не найдена
+          schema:
+            type: string
+      summary: Игра по id
+      tags:
+      - games
+    put:
+      consumes:
+      - application/json
+      description: Изменить игру можно только одним способом - сдаться. Сдаётся тот,
+        чей сейчас ход
+      parameters:
+      - description: id игры
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: action = surrender
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.GameUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/game.Game'
+        "400":
+          description: ошибка в данных
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+        "404":
+          description: игра не найдена
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Сдаться
+      tags:
+      - games
+  /games:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/game.Game'
+            type: array
+      summary: Список игр
+      tags:
+      - games
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет логин и пароль из .env и выдаёт JWT на 1 час
+      parameters:
+      - description: логин и пароль
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.LoginResponse'
+        "400":
+          description: неправильный json
+          schema:
+            type: string
+        "401":
+          description: неверный логин или пароль
+          schema:
+            type: string
+      summary: Авторизация
+      tags:
+      - auth
+  /move:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: номер игры и ход
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.MoveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/move.Move'
+        "400":
+          description: ошибка в данных или ход невозможен
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+        "404":
+          description: игра не найдена
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Сделать ход
+      tags:
+      - moves
+  /move/{id}:
+    get:
+      parameters:
+      - description: id хода
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/move.Move'
+        "400":
+          description: неправильный id
+          schema:
+            type: string
+        "404":
+          description: ход не найден
+          schema:
+            type: string
+      summary: Ход по id
+      tags:
+      - moves
+  /moves:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/move.Move'
+            type: array
+      summary: Список ходов
+      tags:
+      - moves
+  /player:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: имя и цвет (white или black)
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.PlayerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/player.Player'
+        "400":
+          description: ошибка в данных
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Создать игрока
+      tags:
+      - players
+  /player/{id}:
+    delete:
+      parameters:
+      - description: id игрока
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: неправильный id
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+        "404":
+          description: игрок не найден
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Удалить игрока
+      tags:
+      - players
+    get:
+      parameters:
+      - description: id игрока
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/player.Player'
+        "400":
+          description: неправильный id
+          schema:
+            type: string
+        "404":
+          description: игрок не найден
+          schema:
+            type: string
+      summary: Игрок по id
+      tags:
+      - players
+    put:
+      consumes:
+      - application/json
+      description: Меняется только имя, цвет из запроса не используется
+      parameters:
+      - description: id игрока
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: новое имя
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/server.PlayerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/player.Player'
+        "400":
+          description: ошибка в данных
+          schema:
+            type: string
+        "401":
+          description: нужна авторизация
+          schema:
+            type: string
+        "404":
+          description: игрок не найден
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Изменить имя игрока
+      tags:
+      - players
+  /players:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/player.Player'
+            type: array
+      summary: Список игроков
+      tags:
+      - players
+securityDefinitions:
+  BearerAuth:
+    description: 'Введите: Bearer <токен>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
