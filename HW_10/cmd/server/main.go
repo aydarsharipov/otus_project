@@ -2,15 +2,20 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"HW_10/internal/repository"
 	"HW_10/internal/server"
 )
+
+// сколько ждём завершения запросов при остановке сервера
+const shutdownTimeout = 5 * time.Second
 
 func main() {
 	err := repository.LoadAll()
@@ -27,20 +32,37 @@ func main() {
 		Handler: server.NewRouter(),
 	}
 
+	// ошибку сервера передаём в main через канал, а не через os.Exit
+	serverErr := make(chan error, 1)
 	go func() {
 		fmt.Println("сервер запущен на", srv.Addr)
 		err := srv.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			fmt.Println("ошибка сервера:", err)
-			os.Exit(1)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- err
 		}
+		close(serverErr)
 	}()
 
-	// ждём Ctrl+C
+	// ждём Ctrl+C или ошибку сервера
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	<-ctx.Done()
+
+	// если сервер упал - выходим, если пришёл сигнал - останавливаем сервер
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			fmt.Println("ошибка сервера:", err)
+		}
+		return
+	case <-ctx.Done():
+	}
 
 	fmt.Println("останавливаем сервер")
-	srv.Shutdown(context.Background())
+	// останавливаем сервер с таймаутом, чтобы не зависнуть
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	err = srv.Shutdown(shutdownCtx)
+	if err != nil {
+		fmt.Println("ошибка остановки сервера:", err)
+	}
 }

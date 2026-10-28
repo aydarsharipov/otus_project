@@ -71,7 +71,26 @@ func (b *Board) UnmarshalJSON(data []byte) error {
 	}
 	*b = Board{}
 	for _, c := range v.Cells {
+		// проверяем клетку, чтобы не было паники при выходе за пределы массива
+		if err := c.validate(); err != nil {
+			return err
+		}
+		// одна клетка не может встречаться дважды
+		if b.cells[c.Row][c.Col] != nil {
+			return fmt.Errorf("клетка %s указана дважды", SquareName(c.Row, c.Col))
+		}
 		b.cells[c.Row][c.Col] = c.Piece
+	}
+	return nil
+}
+
+// проверка клетки из json перед записью на доску
+func (c cellJSON) validate() error {
+	if c.Row < 0 || c.Row >= Size || c.Col < 0 || c.Col >= Size {
+		return fmt.Errorf("клетка за пределами доски: row=%d col=%d", c.Row, c.Col)
+	}
+	if c.Piece == nil {
+		return fmt.Errorf("в клетке %s нет фигуры", SquareName(c.Row, c.Col))
 	}
 	return nil
 }
