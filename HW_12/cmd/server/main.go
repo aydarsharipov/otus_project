@@ -50,10 +50,20 @@ func gameToProto(g *game.Game) *chess_api.Game {
 		rows = append(rows, row)
 	}
 
+	// берём игроков из списка игроков, чтобы было новое имя после renameplayer
+	white := g.White
+	if p := repository.Players.Get(g.White.ID); p != nil {
+		white = p
+	}
+	black := g.Black
+	if p := repository.Players.Get(g.Black.ID); p != nil {
+		black = p
+	}
+
 	return &chess_api.Game{
 		Id:         int32(g.ID),
-		White:      playerToProto(g.White),
-		Black:      playerToProto(g.Black),
+		White:      playerToProto(white),
+		Black:      playerToProto(black),
 		Board:      rows,
 		Turn:       g.Turn,
 		Status:     g.Status,
