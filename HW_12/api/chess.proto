@@ -1,0 +1,103 @@
+// генерация: make generate
+// или: protoc --go_out=. --go-grpc_out=. api/chess.proto
+syntax = "proto3";
+
+package chess.v1;
+
+option go_package = "pkg/chess_api";
+
+// пустое сообщение
+message Empty {}
+
+message IdRequest {
+  int32 id = 1;
+}
+
+// игроки
+
+message Player {
+  int32 id = 1;
+  string name = 2;
+  string color = 3; // white или black
+}
+
+message PlayerList {
+  repeated Player players = 1;
+}
+
+message CreatePlayerRequest {
+  string name = 1;
+  string color = 2;
+}
+
+message UpdatePlayerRequest {
+  int32 id = 1;
+  string name = 2;
+}
+
+// игры
+
+message Game {
+  int32 id = 1;
+  Player white = 2;
+  Player black = 3;
+  repeated string board = 4; // доска
+  string turn = 5;
+  string status = 6; // active или finished
+  string winner = 7;
+  int32 moves_count = 8;
+}
+
+message GameList {
+  repeated Game games = 1;
+}
+
+message CreateGameRequest {
+  int32 white_id = 1;
+  int32 black_id = 2;
+}
+
+// игру можно только сдать
+message UpdateGameRequest {
+  int32 id = 1;
+  string action = 2; // surrender
+}
+
+// ходы
+
+message Move {
+  int32 id = 1;
+  int32 game_id = 2;
+  string from = 3;
+  string to = 4;
+  string notation = 5;
+}
+
+message MoveList {
+  repeated Move moves = 1;
+}
+
+message CreateMoveRequest {
+  int32 game_id = 1;
+  string from = 2;
+  string to = 3;
+}
+
+service ChessService {
+  rpc CreatePlayer(CreatePlayerRequest) returns (Player);
+  rpc GetPlayer(IdRequest) returns (Player);
+  rpc ListPlayers(Empty) returns (PlayerList);
+  rpc UpdatePlayer(UpdatePlayerRequest) returns (Player);
+  rpc DeletePlayer(IdRequest) returns (Empty);
+
+  rpc CreateGame(CreateGameRequest) returns (Game);
+  rpc GetGame(IdRequest) returns (Game);
+  rpc ListGames(Empty) returns (GameList);
+  rpc UpdateGame(UpdateGameRequest) returns (Game);
+  rpc DeleteGame(IdRequest) returns (Empty);
+
+  // ходы не меняем и не удаляем
+  rpc CreateMove(CreateMoveRequest) returns (Move);
+  rpc GetMove(IdRequest) returns (Move);
+  rpc ListMoves(Empty) returns (MoveList);
+}
