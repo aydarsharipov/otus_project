@@ -28,6 +28,8 @@ func ConnectMongo(uri string) (*mongo.Client, error) {
 	defer cancel()
 	err = client.Ping(ctx, nil)
 	if err != nil {
+		// монга не ответила, клиент больше не нужен
+		client.Disconnect(context.Background())
 		return nil, err
 	}
 	return client, nil

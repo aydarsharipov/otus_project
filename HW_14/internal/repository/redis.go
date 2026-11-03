@@ -24,6 +24,8 @@ func ConnectRedis(addr string) (*redis.Client, error) {
 	defer cancel()
 	err := client.Ping(ctx).Err()
 	if err != nil {
+		// редис не ответил, клиент больше не нужен
+		client.Close()
 		return nil, err
 	}
 	return client, nil
@@ -63,21 +65,35 @@ func (l *RedisLogger) All() []string {
 	ctx, cancel := newCtx()
 	defer cancel()
 
-	keys, err := l.client.Keys(ctx, logPrefix+"*").Result()
-	if err != nil {
+	// SCAN вместо KEYS, чтобы не блокировать редис на большом количестве ключей
+	keys := []string{}
+	iter := l.client.Scan(ctx, 0, logPrefix+"*", 100).Iterator()
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+	if err := iter.Err(); err != nil {
 		fmt.Println("не удалось получить логи из redis:", err)
 		return []string{}
 	}
+	list := []string{}
+	if len(keys) == 0 {
+		return list
+	}
 	sort.Strings(keys)
 
-	list := []string{}
-	for _, key := range keys {
-		val, err := l.client.Get(ctx, key).Result()
-		if err != nil {
+	// забираем все значения одним запросом
+	vals, err := l.client.MGet(ctx, keys...).Result()
+	if err != nil {
+		fmt.Println("не удалось получить логи из redis:", err)
+		return list
+	}
+	for _, val := range vals {
+		s, ok := val.(string)
+		if !ok {
 			// мог протухнуть пока читали
 			continue
 		}
-		list = append(list, val)
+		list = append(list, s)
 	}
 	return list
 }
