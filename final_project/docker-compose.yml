@@ -1,0 +1,27 @@
+services:
+  server:
+    build:
+      context: .
+      args:
+        APP: server
+    environment:
+      ADDR: ":8080"
+    ports:
+      # наружу только на localhost
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  # Клиент интерактивный, поэтому запускается через docker compose run (см. README.md).
+  client:
+    build:
+      context: .
+      args:
+        APP: client
+    environment:
+      SERVER_URL: "http://server:8080"
+    depends_on:
+      - server
+    stdin_open: true
+    tty: true
+    profiles:
+      - client
