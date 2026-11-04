@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,7 +20,7 @@ const (
 // doRequest отправляет запрос прямо в роутер, без настоящей сети.
 func doRequest(t *testing.T, h http.Handler, method, url, body, token string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(method, url, strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), method, url, strings.NewReader(body))
 	if token != "" {
 		req.Header.Set(api.TokenHeader, token)
 	}

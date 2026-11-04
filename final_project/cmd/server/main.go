@@ -32,7 +32,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("сервер запущен на %s", addr)
+		log.Printf("сервер запущен на %q", addr) //nolint:gosec // addr из env ADDR, экранирован через %q
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("ошибка сервера: %v", err)
 		}
